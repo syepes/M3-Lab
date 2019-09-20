@@ -54,7 +54,8 @@ scrape_configs:
 
 remote_read:
   - url: http://m3qy01:7901/api/v1/prom/remote/read
-    read_recent: true
+    remote_timeout: 1m
+    read_recent: false
 
 remote_write:
   - url: "http://m3cr01:7202/api/v1/prom/remote/write"

@@ -24,8 +24,10 @@ services:
     container_name: etcd01
     hostname: etcd01
     entrypoint: /usr/local/bin/etcd
+    expose:
+      - 2379-2380
     ports:
-      - 2379
+      - 2379-2380:2379-2380
     networks:
       - backend
     volumes:
@@ -46,8 +48,8 @@ services:
     image: quay.io/coreos/etcd:v3.4.1
     container_name: etcd02
     hostname: etcd02
-    ports:
-      - 2379
+    expose:
+      - 2379-2380
     networks:
       - backend
     volumes:
@@ -69,8 +71,8 @@ services:
     image: quay.io/coreos/etcd:v3.4.1
     container_name: etcd03
     hostname: etcd03
-    ports:
-      - 2379
+    expose:
+      - 2379-2380
     networks:
       - backend
     volumes:
@@ -96,11 +98,9 @@ services:
     expose:
       - 7201
       - 9000-9004
-      - 2379-2380
     ports:
       - "7201:7201"
       - "9000-9004:9000-9004"
-      - "2379-2380:2379-2380"
     networks:
       - backend
     volumes:
@@ -117,7 +117,6 @@ services:
     expose:
       - 7201
       - 9000-9004
-      - 2379-2380
     networks:
       - backend
     volumes:
@@ -134,7 +133,6 @@ services:
     expose:
       - 7201
       - 9000-9004
-      - 2379-2380
     networks:
       - backend
     volumes:

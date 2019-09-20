@@ -15,9 +15,13 @@ function retry() {(
 )}
 
 echo -e "\e[1;31m>>\e[0m Start ETCD and M3DB Nodes"
-docker-compose up -d etcd01 etcd02 etcd03
-docker-compose up -d m3db01 m3db02 m3db03
 
+docker-compose up -d etcd01 etcd02 etcd03
+echo -e "\e[1;31m>>\e[0m Wait for ETCD API (etcd01) to be available"
+retry '[ "$(curl -sSf localhost:2379/health | jq ".health")" == \"true\" ]'
+
+
+docker-compose up -d m3db01 m3db02 m3db03
 echo -e "\e[1;31m>>\e[0m Wait for coordinator API (m3db01) to be available"
 retry '[ "$(curl -sSf localhost:7201/api/v1/namespace | jq ".namespaces | length")" == "0" ]'
 
