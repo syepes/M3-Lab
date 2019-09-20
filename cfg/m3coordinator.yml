@@ -87,6 +87,7 @@ downsample:
       connection:
         writeTimeout: 250ms
 
+# Receive metrics from the m3aggregators on port 7507
 ingest:
   ingester:
     workerPoolSize: 100

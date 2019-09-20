@@ -24,6 +24,7 @@ retry '[ "$(curl -sSf localhost:2379/health | jq ".health")" == \"true\" ]'
 docker-compose up -d m3db01 m3db02 m3db03
 echo -e "\e[1;31m>>\e[0m Wait for coordinator API (m3db01) to be available"
 retry '[ "$(curl -sSf localhost:7201/api/v1/namespace | jq ".namespaces | length")" == "0" ]'
+retry '[ "$(curl -sSf localhost:9002/health | jq .status)" == \"up\" ]'
 
 function gen_db_instance() {
   local host=$1
@@ -103,6 +104,7 @@ retry '[ "$(curl -sSf localhost:7201/api/v1/namespace | jq .registry.namespaces.
 
 echo -e "\e[1;31m>>\e[0m Waiting until shards are marked as available"
 retry '[ "$(curl -sSf localhost:7201/api/v1/placement | grep -c INITIALIZING)" -eq 0 ]'
+retry '[ "$(curl -sSf localhost:9002/health | jq .bootstrapped )" == true ]'
 
 function gen_aggregator_instance() {
   local host=$1
