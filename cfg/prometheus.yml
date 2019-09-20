@@ -1,0 +1,63 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "lab"
+
+# Load and evaluate rules in this file every 'evaluation_interval' seconds.
+# rule_files:
+#   - "alert.rules"
+
+alerting:
+  alertmanagers:
+    - scheme: http
+      static_configs:
+        - targets:
+          # - "alertmanager:9093"
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "m3dbnode"
+    static_configs:
+      - targets: ["m3db01:9004", "m3db02:9004", "m3db03:9004"]
+
+  - job_name: "m3coordinator"
+    static_configs:
+      - targets: ["m3db01:7203", "m3cr01:7203", "m3cr02:7203", "m3cr03:7203"]
+
+  - job_name: "m3aggregator"
+    static_configs:
+      - targets:
+          [
+            "m3ag01:7203",
+            "m3ag02:7203",
+            "m3ag03:7203",
+            "m3ag04:7203",
+            "m3ag05:7203",
+            "m3ag06:7203",
+          ]
+
+  - job_name: "m3query"
+    static_configs:
+      - targets: ["m3qy01:7203"]
+
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+remote_read:
+  - url: http://m3qy01:7901/api/v1/prom/remote/read
+    read_recent: true
+
+remote_write:
+  - url: "http://m3cr01:7202/api/v1/prom/remote/write"
+    write_relabel_configs:
+      - target_label: metrics_storage
+        replacement: m3db_remote

@@ -1,0 +1,120 @@
+listenAddress:
+  type: "config"
+  value: "0.0.0.0:7202"
+
+logging:
+  level: info
+
+metrics:
+  scope:
+    prefix: coordinator
+  prometheus:
+    handlerPath: /metrics
+    listenAddress: 0.0.0.0:7203
+  sanitization: prometheus
+  samplingRate: 1.0
+  extended: detailed
+
+tagOptions:
+  idScheme: quoted
+
+limits:
+  maxComputedDatapoints: 10000
+
+clusters:
+  - namespaces:
+      - namespace: default
+        retention: 1440h
+        type: unaggregated
+        downsample:
+          all: false
+      - namespace: agg_6months_5m
+        retention: 4320h
+        resolution: 5m
+        type: aggregated
+        downsample:
+          all: false
+      - namespace: agg_2years_1h
+        retention: 17520h
+        resolution: 1h
+        type: aggregated
+        downsample:
+          all: false
+
+    client:
+      writeConsistencyLevel: majority
+      readConsistencyLevel: unstrict_majority
+
+      config:
+        service:
+          env: default_env
+          zone: embedded
+          service: m3db
+          cacheDir: /var/lib/m3kv
+          etcdClusters:
+            - zone: embedded
+              endpoints:
+                - etcd01:2379
+                - etcd02:2379
+                - etcd03:2379
+
+downsample:
+  remoteAggregator:
+    client:
+      placementKV:
+        namespace: /placement
+      placementWatcher:
+        key: m3aggregator
+        initWatchTimeout: 300s
+      hashType: murmur32
+      shardCutoffLingerDuration: 1m
+      flushSize: 1440
+      maxTimerBatchSize: 1120
+      queueSize: 10000
+      queueDropType: oldest
+      encoder:
+        initBufferSize: 2048
+        maxMessageSize: 10485760
+        bytesPool:
+          buckets:
+            - capacity: 2048
+              count: 4096
+            - capacity: 4096
+              count: 4096
+          watermark:
+            low: 0.7
+            high: 1.0
+      connection:
+        writeTimeout: 250ms
+
+ingest:
+  ingester:
+    workerPoolSize: 100
+    opPool:
+      size: 100
+    retry:
+      maxRetries: 3
+      jitter: true
+    logSampleRate: 0.01
+  m3msg:
+    server:
+      listenAddress: "0.0.0.0:7507"
+      retry:
+        maxBackoff: 10s
+        jitter: true
+# carbon:
+#   ingester:
+#     listenAddress: "0.0.0.0:7204"
+#     rules:
+#       - pattern: .*_max
+#         aggregation:
+#           type: max
+#         policies:
+#           - resolution: 10s
+#             retention: 4380h
+#       - pattern: .*
+#         aggregation:
+#           type: mean
+#         policies:
+#           - resolution: 10s
+#             retention: 4380h

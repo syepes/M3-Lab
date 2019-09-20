@@ -1,0 +1,354 @@
+version: "3.5"
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  etcd01: {}
+  etcd02: {}
+  etcd03: {}
+  m3db01_kv: {}
+  m3db01_db: {}
+  m3db02_kv: {}
+  m3db02_db: {}
+  m3db03_kv: {}
+  m3db03_db: {}
+  prometheus: {}
+  grafana: {}
+
+
+services:
+  etcd01:
+    image: quay.io/coreos/etcd:v3.4.1
+    container_name: etcd01
+    hostname: etcd01
+    entrypoint: /usr/local/bin/etcd
+    ports:
+      - 2379
+    networks:
+      - backend
+    volumes:
+      - etcd01:/etcd_data
+    command:
+      - '--name=etcd01'
+      - '--logger=zap'
+      - '--advertise-client-urls=http://etcd01:2379'
+      - '--initial-advertise-peer-urls=http://etcd01:2380'
+      - '--listen-peer-urls=http://0.0.0.0:2380'
+      - '--listen-client-urls=http://0.0.0.0:2379'
+      - '--heartbeat-interval=250'
+      - '--election-timeout=1250'
+      - '--initial-cluster=etcd01=http://etcd01:2380,etcd02=http://etcd02:2380,etcd03=http://etcd03:2380'
+      - '--initial-cluster-state=new'
+      - '--initial-cluster-token=123root123'
+  etcd02:
+    image: quay.io/coreos/etcd:v3.4.1
+    container_name: etcd02
+    hostname: etcd02
+    ports:
+      - 2379
+    networks:
+      - backend
+    volumes:
+      - etcd02:/etcd_data
+    entrypoint: /usr/local/bin/etcd
+    command:
+      - '--name=etcd02'
+      - '--logger=zap'
+      - '--advertise-client-urls=http://etcd02:2379'
+      - '--initial-advertise-peer-urls=http://etcd02:2380'
+      - '--listen-peer-urls=http://0.0.0.0:2380'
+      - '--listen-client-urls=http://0.0.0.0:2379'
+      - '--heartbeat-interval=250'
+      - '--election-timeout=1250'
+      - '--initial-cluster=etcd01=http://etcd01:2380,etcd02=http://etcd02:2380,etcd03=http://etcd03:2380'
+      - '--initial-cluster-state=new'
+      - '--initial-cluster-token=123root123'
+  etcd03:
+    image: quay.io/coreos/etcd:v3.4.1
+    container_name: etcd03
+    hostname: etcd03
+    ports:
+      - 2379
+    networks:
+      - backend
+    volumes:
+      - etcd03:/etcd_data
+    entrypoint: /usr/local/bin/etcd
+    command:
+      - '--name=etcd03'
+      - '--logger=zap'
+      - '--advertise-client-urls=http://etcd03:2379'
+      - '--initial-advertise-peer-urls=http://etcd03:2380'
+      - '--listen-peer-urls=http://0.0.0.0:2380'
+      - '--listen-client-urls=http://0.0.0.0:2379'
+      - '--heartbeat-interval=250'
+      - '--election-timeout=1250'
+      - '--initial-cluster=etcd01=http://etcd01:2380,etcd02=http://etcd02:2380,etcd03=http://etcd03:2380'
+      - '--initial-cluster-state=new'
+      - '--initial-cluster-token=123root123'
+
+  m3db01:
+    image: quay.io/m3db/m3dbnode:v0.13.0
+    container_name: m3db01
+    hostname: m3db01
+    expose:
+      - 7201
+      - 9000-9004
+      - 2379-2380
+    ports:
+      - "7201:7201"
+      - "9000-9004:9000-9004"
+      - "2379-2380:2379-2380"
+    networks:
+      - backend
+    volumes:
+      - m3db01_kv:/var/lib/m3kv/
+      - m3db01_db:/var/lib/m3db/
+    cap_add:
+      - SYS_RESOURCE
+    volumes:
+      - "./cfg/m3dbnode.yml:/etc/m3dbnode/m3dbnode.yml"
+  m3db02:
+    image: quay.io/m3db/m3dbnode:v0.13.0
+    container_name: m3db02
+    hostname: m3db02
+    expose:
+      - 7201
+      - 9000-9004
+      - 2379-2380
+    networks:
+      - backend
+    volumes:
+      - m3db02_kv:/var/lib/m3kv/
+      - m3db02_db:/var/lib/m3db/
+    cap_add:
+      - SYS_RESOURCE
+    volumes:
+      - "./cfg/m3dbnode.yml:/etc/m3dbnode/m3dbnode.yml"
+  m3db03:
+    image: quay.io/m3db/m3dbnode:v0.13.0
+    container_name: m3db03
+    hostname: m3db03
+    expose:
+      - 7201
+      - 9000-9004
+      - 2379-2380
+    networks:
+      - backend
+    volumes:
+      - m3db03_kv:/var/lib/m3kv/
+      - m3db03_db:/var/lib/m3db/
+    cap_add:
+      - SYS_RESOURCE
+    volumes:
+      - "./cfg/m3dbnode.yml:/etc/m3dbnode/m3dbnode.yml"
+
+  m3cr01:
+    image: quay.io/m3db/m3coordinator:v0.13.0
+    container_name: m3cr01
+    hostname: m3cr01
+    expose:
+      - 7202
+      - 7203
+      - 7204
+      - 7507
+    ports:
+      - "7202:7202"
+      - "7204:7204"
+      - "7507:7507"
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3coordinator.yml:/etc/m3coordinator/m3coordinator.yml"
+  m3cr02:
+    image: quay.io/m3db/m3coordinator:v0.13.0
+    container_name: m3cr02
+    hostname: m3cr02
+    expose:
+      - 7202
+      - 7203
+      - 7204
+      - 7507
+    ports:
+      - "7205:7204"
+      - "7508:7507"
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3coordinator.yml:/etc/m3coordinator/m3coordinator.yml"
+  m3cr03:
+    image: quay.io/m3db/m3coordinator:v0.13.0
+    container_name: m3cr03
+    hostname: m3cr03
+    expose:
+      - 7202
+      - 7203
+      - 7204
+      - 7507
+    ports:
+      - "7206:7204"
+      - "7509:7507"
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3coordinator.yml:/etc/m3coordinator/m3coordinator.yml"
+
+  m3ag01:
+    image: quay.io/m3db/m3aggregator:v0.13.0
+    container_name: m3ag01
+    hostname: m3ag01
+    expose:
+      - 6000
+      - 6001
+    ports:
+      - "6001:6001"
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3aggregator.yml:/etc/m3aggregator/m3aggregator.yml"
+  m3ag02:
+    image: quay.io/m3db/m3aggregator:v0.13.0
+    container_name: m3ag02
+    hostname: m3ag02
+    expose:
+      - 6000
+      - 6001
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3aggregator.yml:/etc/m3aggregator/m3aggregator.yml"
+  m3ag03:
+    image: quay.io/m3db/m3aggregator:v0.13.0
+    container_name: m3ag03
+    hostname: m3ag03
+    expose:
+      - 6000
+      - 6001
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3aggregator.yml:/etc/m3aggregator/m3aggregator.yml"
+  m3ag04:
+    image: quay.io/m3db/m3aggregator:v0.13.0
+    container_name: m3ag04
+    hostname: m3ag04
+    expose:
+      - 6000
+      - 6001
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3aggregator.yml:/etc/m3aggregator/m3aggregator.yml"
+  m3ag05:
+    image: quay.io/m3db/m3aggregator:v0.13.0
+    container_name: m3ag05
+    hostname: m3ag05
+    expose:
+      - 6000
+      - 6001
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3aggregator.yml:/etc/m3aggregator/m3aggregator.yml"
+  m3ag06:
+    image: quay.io/m3db/m3aggregator:v0.13.0
+    container_name: m3ag06
+    hostname: m3ag06
+    expose:
+      - 6000
+      - 6001
+    networks:
+      - backend
+    volumes:
+      - "./cfg/m3aggregator.yml:/etc/m3aggregator/m3aggregator.yml"
+
+  m3qy01:
+    image: quay.io/m3db/m3query:v0.13.0
+    container_name: m3qy01
+    hostname: m3qy01
+    expose:
+      - 7201
+      - 7203
+    ports:
+      - 7901:7201
+    networks:
+      - backend
+    volumes:
+      - ./cfg/m3query.yml:/etc/m3query/m3query.yml
+
+  prometheus:
+    image: prom/prometheus:v2.12.0
+    container_name: prometheus
+    hostname: prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - backend
+    volumes:
+      - ./cfg/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-admin-api'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=2h'
+      - '--storage.tsdb.wal-compression'
+      - '--log.level=info'
+      - '--log.format=json'
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    hostname: grafana
+    user: "104"
+    ports:
+      - 3000:3000
+    networks:
+      - backend
+    volumes:
+      - ./cfg/grafana/provisioning/:/etc/grafana/provisioning/
+      - grafana:/var/lib/grafana
+    env_file:
+      - ./cfg/grafana/config.monitoring
+
+  cadvisor:
+    image: google/cadvisor
+    container_name: cadvisor
+    hostname: cadvisor
+    ports:
+      - 8080:8080
+    networks:
+      - backend
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    hostname: node-exporter
+    ports:
+      - 9100:9100
+    networks:
+      - backend
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.diskstats.ignored-devices="^\(ram|loop|fd\)\d+$$"'
+      - '--collector.filesystem.ignored-fs-types="^\(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|tmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs\)$$"'
+      - '--collector.filesystem.ignored-mount-points="^/\(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs\)\($$|/\)"'
+      - '--collector.tcpstat'
+      - '--collector.interrupts'
+      - '--log.level=info'
+      - '--log.format=logger:stdout?json=true'
